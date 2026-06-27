@@ -136,8 +136,9 @@ def load_campaign_chunks(connection, campaign_id: str):
                 u.display_name AS author_display_name
             FROM content_chunks cc
             JOIN sessions s ON s.id = cc.session_id
-            LEFT JOIN session_notes sn ON sn.id = cc.source_id AND cc.source_type = 'session_note'
-            LEFT JOIN users u ON u.id = sn.author_user_id
+            LEFT JOIN source src ON src.id = cc.source_id
+            LEFT JOIN session_notes sn ON sn.id = COALESCE(src.legacy_note_id, cc.source_id)
+            LEFT JOIN users u ON u.id = COALESCE(src.author_user_id, sn.author_user_id)
             WHERE cc.campaign_id = ?
             """,
             (campaign_id,),

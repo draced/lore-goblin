@@ -14,9 +14,9 @@
 
 **Purpose**: Migration infrastructure and shared types
 
-- [ ] T001 Create migrations directory `apps/api/lore_goblin/migrations/`
-- [ ] T002 [P] Add Pydantic enums for source_type and entity_type in `apps/api/lore_goblin/models.py`
-- [ ] T003 Add pytest fixtures for in-memory SQLite with legacy schema in `apps/api/tests/conftest.py`
+- [X] T001 Create migrations directory `apps/api/lore_goblin/migrations/`
+- [X] T002 [P] Add Pydantic enums for source_type and entity_type in `apps/api/lore_goblin/models.py`
+- [X] T003 Add pytest fixtures for in-memory SQLite with legacy schema in `apps/api/tests/conftest.py`
 
 ---
 
@@ -24,10 +24,10 @@
 
 **Purpose**: Schema and migration runner — MUST complete before user stories
 
-- [ ] T004 Write migration `apps/api/lore_goblin/migrations/001_campaign_knowledge.sql` per data-model.md
-- [ ] T005 Write migration `apps/api/lore_goblin/migrations/002_migrate_legacy_data.sql` for session_notes and player_characters backfill
-- [ ] T006 Implement migration runner with schema_version in `apps/api/lore_goblin/db.py`
-- [ ] T007 [P] Write failing migration tests in `apps/api/tests/test_migrations.py` (dry-run, idempotency, backfill counts)
+- [X] T004 Write migration `apps/api/lore_goblin/migrations/001_campaign_knowledge.sql` per data-model.md
+- [X] T005 Write migration `apps/api/lore_goblin/migrations/002_migrate_legacy_data.sql` for session_notes and player_characters backfill
+- [X] T006 Implement migration runner with schema_version in `apps/api/lore_goblin/db.py`
+- [X] T007 [P] Write failing migration tests in `apps/api/tests/test_migrations.py` (dry-run, idempotency, backfill counts)
 
 **Checkpoint**: Migrations apply cleanly on fresh and legacy databases
 
@@ -41,15 +41,15 @@
 
 ### Tests for User Story 1 (write first, verify FAIL)
 
-- [ ] T008 [P] [US1] Contract test POST /sessions creates source in `apps/api/tests/test_sources.py`
-- [ ] T009 [P] [US1] Integration test source list filter by type in `apps/api/tests/test_sources.py`
+- [X] T008 [P] [US1] Contract test POST /sessions creates source in `apps/api/tests/test_sources.py`
+- [X] T009 [P] [US1] Integration test source list filter by type in `apps/api/tests/test_sources.py`
 
 ### Implementation for User Story 1
 
-- [ ] T010 [US1] Add create_source and list_sources in `apps/api/lore_goblin/repository.py`
-- [ ] T011 [US1] Refactor add_session_note to dual-write source + link content_chunks.source_id in `apps/api/lore_goblin/repository.py`
-- [ ] T012 [US1] Add GET /campaigns/{id}/sources endpoint in `apps/api/lore_goblin/main.py`
-- [ ] T013 [US1] Verify T008–T009 pass
+- [X] T010 [US1] Add create_source and list_sources in `apps/api/lore_goblin/repository.py`
+- [X] T011 [US1] Refactor add_session_note to dual-write source + link content_chunks.source_id in `apps/api/lore_goblin/repository.py`
+- [X] T012 [US1] Add GET /campaigns/{id}/sources endpoint in `apps/api/lore_goblin/main.py`
+- [X] T013 [US1] Verify T008–T009 pass
 
 **Checkpoint**: Session ingest creates unified sources
 
@@ -63,14 +63,14 @@
 
 ### Tests for User Story 2 (write first, verify FAIL)
 
-- [ ] T014 [P] [US2] Contract test POST /campaigns/{id}/entities in `apps/api/tests/test_entities.py`
-- [ ] T015 [P] [US2] Validation test invalid entity_type in `apps/api/tests/test_entities.py`
+- [X] T014 [P] [US2] Contract test POST /campaigns/{id}/entities in `apps/api/tests/test_entities.py`
+- [X] T015 [P] [US2] Validation test invalid entity_type in `apps/api/tests/test_entities.py`
 
 ### Implementation for User Story 2
 
-- [ ] T016 [US2] Add create_entity and list_entities in `apps/api/lore_goblin/repository.py`
-- [ ] T017 [US2] Add GET and POST /campaigns/{id}/entities in `apps/api/lore_goblin/main.py`
-- [ ] T018 [US2] Verify T014–T015 pass
+- [X] T016 [US2] Add create_entity and list_entities in `apps/api/lore_goblin/repository.py`
+- [X] T017 [US2] Add GET and POST /campaigns/{id}/entities in `apps/api/lore_goblin/main.py`
+- [X] T018 [US2] Verify T014–T015 pass
 
 **Checkpoint**: Entity registry API functional
 
@@ -84,15 +84,15 @@
 
 ### Tests for User Story 3 (write first, verify FAIL)
 
-- [ ] T019 [P] [US3] Integration test legacy session_notes → sources in `apps/api/tests/test_migrations.py`
-- [ ] T020 [P] [US3] Integration test legacy player_characters → entities in `apps/api/tests/test_migrations.py`
+- [X] T019 [P] [US3] Integration test legacy session_notes → sources in `apps/api/tests/test_migrations.py`
+- [X] T020 [P] [US3] Integration test legacy player_characters → entities in `apps/api/tests/test_migrations.py`
 
 ### Implementation for User Story 3
 
-- [ ] T021 [US3] Implement run_migration(dry_run) in `apps/api/lore_goblin/migrations/runner.py`
-- [ ] T022 [US3] Add POST /admin/migrate endpoint in `apps/api/lore_goblin/main.py`
-- [ ] T023 [US3] Auto-run pending migrations on startup in `apps/api/lore_goblin/db.py`
-- [ ] T024 [US3] Verify T019–T020 pass
+- [X] T021 [US3] Implement run_migration(dry_run) in `apps/api/lore_goblin/migrations/runner.py`
+- [X] T022 [US3] Add POST /admin/migrate endpoint in `apps/api/lore_goblin/main.py`
+- [X] T023 [US3] Auto-run pending migrations on startup in `apps/api/lore_goblin/db.py`
+- [X] T024 [US3] Verify T019–T020 pass
 
 **Checkpoint**: Existing deployments upgrade safely
 
@@ -106,15 +106,15 @@
 
 ### Tests for User Story 4 (write first, verify FAIL)
 
-- [ ] T025 [P] [US4] Compatibility test GET /player-characters response shape in `apps/api/tests/test_player_characters_compat.py`
-- [ ] T026 [P] [US4] Test POST /player-characters creates entity+source in `apps/api/tests/test_player_characters_compat.py`
+- [X] T025 [P] [US4] Compatibility test GET /player-characters response shape in `apps/api/tests/test_player_characters_compat.py`
+- [X] T026 [P] [US4] Test POST /player-characters creates entity+source in `apps/api/tests/test_player_characters_compat.py`
 
 ### Implementation for User Story 4
 
-- [ ] T027 [US4] Refactor create_player_character to write entity+source in `apps/api/lore_goblin/repository.py`
-- [ ] T028 [US4] Refactor list_player_characters to read from entity+source with legacy fallback in `apps/api/lore_goblin/repository.py`
-- [ ] T029 [US4] Verify web roster still works in `apps/web/` (no API shape change)
-- [ ] T030 [US4] Verify T025–T026 pass
+- [X] T027 [US4] Refactor create_player_character to write entity+source in `apps/api/lore_goblin/repository.py`
+- [X] T028 [US4] Refactor list_player_characters to read from entity+source with legacy fallback in `apps/api/lore_goblin/repository.py`
+- [X] T029 [US4] Verify web roster still works in `apps/web/` (no API shape change)
+- [X] T030 [US4] Verify T025–T026 pass
 
 **Checkpoint**: PC roster UX preserved on new model
 
@@ -122,9 +122,9 @@
 
 ## Phase 7: Polish
 
-- [ ] T031 [P] Update `specs/002-campaign-knowledge-model/quickstart.md` if endpoint paths differ
-- [ ] T032 Run full API test suite `cd apps/api && pytest -v`
-- [ ] T033 Run web build `cd apps/web && npm run build`
+- [X] T031 [P] Update `specs/002-campaign-knowledge-model/quickstart.md` if endpoint paths differ
+- [X] T032 Run full API test suite `cd apps/api && pytest -v`
+- [X] T033 Run web build `cd apps/web && npm run build`
 
 ---
 

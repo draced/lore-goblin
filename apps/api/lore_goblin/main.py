@@ -6,17 +6,21 @@ from pydantic import BaseModel, Field
 
 from .answering import answer_question
 from .config import Settings, get_settings
-from .db import initialize_database
+from .db import get_connection, initialize_database, set_database_path
+from .migrations.runner import run_migration
 from .repository import (
     add_session_note,
     create_campaign,
+    create_entity,
     create_player_character,
     get_campaign,
     get_campaign_for_guild,
     link_discord_guild,
     list_campaigns,
+    list_entities,
     list_player_characters,
     list_sessions,
+    list_sources,
 )
 
 
@@ -51,6 +55,17 @@ class AddPlayerCharacterRequest(BaseModel):
     notes: str = Field(min_length=1)
 
 
+class CreateEntityRequest(BaseModel):
+    entity_type: str = Field(min_length=1)
+    name: str = Field(min_length=1)
+    aliases: list[str] = Field(default_factory=list)
+    summary: str = ""
+
+
+class MigrateRequest(BaseModel):
+    dry_run: bool = False
+
+
 class AskRequest(BaseModel):
     campaign_id: str | None = None
     guild_id: str | None = None
@@ -58,7 +73,8 @@ class AskRequest(BaseModel):
 
 
 def create_app(settings: Settings) -> FastAPI:
-    initialize_database()
+    set_database_path(settings.database_path)
+    initialize_database(settings.database_path)
     app = FastAPI(title="Lore Goblin API", version="0.1.0")
     app.add_middleware(
         CORSMiddleware,
@@ -94,6 +110,39 @@ def create_app(settings: Settings) -> FastAPI:
     def sessions(campaign_id: str) -> list[dict]:
         return list_sessions(campaign_id)
 
+    @app.get("/campaigns/{campaign_id}/sources")
+    def sources(campaign_id: str, source_type: str | None = None) -> list[dict]:
+        if not get_campaign(campaign_id):
+            raise HTTPException(status_code=404, detail="Campaign not found")
+        try:
+            return list_sources(campaign_id, source_type)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.get("/campaigns/{campaign_id}/entities")
+    def entities(campaign_id: str, entity_type: str | None = None) -> list[dict]:
+        if not get_campaign(campaign_id):
+            raise HTTPException(status_code=404, detail="Campaign not found")
+        try:
+            return list_entities(campaign_id, entity_type)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post("/campaigns/{campaign_id}/entities", status_code=201)
+    def entity_create(campaign_id: str, request: CreateEntityRequest) -> dict:
+        if not get_campaign(campaign_id):
+            raise HTTPException(status_code=404, detail="Campaign not found")
+        try:
+            return create_entity(
+                campaign_id,
+                request.entity_type,
+                request.name,
+                request.aliases,
+                request.summary,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
     @app.get("/campaigns/{campaign_id}/player-characters")
     def player_characters(campaign_id: str) -> list[dict]:
         if not get_campaign(campaign_id):
@@ -120,6 +169,20 @@ def create_app(settings: Settings) -> FastAPI:
             author_display_name=request.author_display_name,
             discord_user_id=request.discord_user_id,
         )
+
+    @app.post("/admin/migrate")
+    def admin_migrate(request: MigrateRequest) -> dict:
+        if not settings.allow_migrate:
+            raise HTTPException(status_code=403, detail="Migration endpoint is disabled")
+        with get_connection() as connection:
+            result = run_migration(connection, dry_run=request.dry_run)
+        return {
+            "dry_run": result.dry_run,
+            "sources_created": result.sources_created,
+            "entities_created": result.entities_created,
+            "chunks_linked": result.chunks_linked,
+            "errors": result.errors,
+        }
 
     @app.post("/ask")
     def ask(request: AskRequest) -> dict:
