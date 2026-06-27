@@ -1,13 +1,30 @@
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
+import logging
 import sqlite3
 import uuid
 
 from .config import get_settings
 from .migrations.runner import apply_pending_migrations
 
+logger = logging.getLogger(__name__)
+
 _database_path_override: str | None = None
+
+
+def load_sqlite_extensions(connection: sqlite3.Connection) -> None:
+    if not hasattr(connection, "enable_load_extension"):
+        logger.warning("SQLite extension loading is unavailable; vector search disabled")
+        return
+    try:
+        import sqlite_vec
+
+        connection.enable_load_extension(True)
+        sqlite_vec.load(connection)
+        connection.enable_load_extension(False)
+    except Exception as exc:
+        logger.warning("Failed to load sqlite-vec extension: %s", exc)
 
 
 def set_database_path(database_path: str) -> None:
@@ -36,6 +53,7 @@ def initialize_database(database_path: str | None = None) -> None:
     db_path.parent.mkdir(parents=True, exist_ok=True)
     schema_path = Path(__file__).with_name("schema.sql")
     with sqlite3.connect(db_path) as connection:
+        load_sqlite_extensions(connection)
         connection.executescript(schema_path.read_text(encoding="utf-8"))
         apply_pending_migrations(connection)
         connection.commit()
@@ -47,6 +65,7 @@ def get_connection() -> Iterator[sqlite3.Connection]:
     connection = sqlite3.connect(resolve_database_path())
     connection.row_factory = sqlite3.Row
     connection.execute("PRAGMA foreign_keys = ON")
+    load_sqlite_extensions(connection)
     try:
         yield connection
         connection.commit()
@@ -64,6 +83,7 @@ def connection_at(path: str | Path) -> Iterator[sqlite3.Connection]:
     connection = sqlite3.connect(str(path))
     connection.row_factory = sqlite3.Row
     connection.execute("PRAGMA foreign_keys = ON")
+    load_sqlite_extensions(connection)
     try:
         yield connection
         connection.commit()

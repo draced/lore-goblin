@@ -11,6 +11,7 @@ from .config import Settings, get_settings
 from .db import get_connection, initialize_database, set_database_path
 from .extraction.jobs import get_extraction_status, shutdown_executor
 from .migrations.runner import run_migration
+from .retrieval.vectors import sync_chunk_vectors
 from .repository import (
     add_session_note,
     create_campaign,
@@ -198,6 +199,47 @@ def create_app(settings: Settings) -> FastAPI:
             "entities_created": result.entities_created,
             "chunks_linked": result.chunks_linked,
             "errors": result.errors,
+        }
+
+    @app.post("/admin/reindex-search")
+    def admin_reindex_search() -> dict:
+        with get_connection() as connection:
+            connection.execute("DELETE FROM entities_fts")
+            connection.execute(
+                """
+                INSERT INTO entities_fts(entity_id, campaign_id, name, aliases_text, summary)
+                SELECT
+                    e.id,
+                    e.campaign_id,
+                    e.name,
+                    COALESCE((SELECT group_concat(value, ' ') FROM json_each(e.aliases_json)), ''),
+                    e.summary
+                FROM entity e
+                """
+            )
+            connection.execute("DELETE FROM claims_fts")
+            connection.execute(
+                """
+                INSERT INTO claims_fts(claim_id, campaign_id, claim_text, predicate)
+                SELECT id, campaign_id, claim_text, predicate FROM claim
+                """
+            )
+            connection.execute("DELETE FROM sources_fts")
+            connection.execute(
+                """
+                INSERT INTO sources_fts(source_id, campaign_id, title, body)
+                SELECT id, campaign_id, title, body FROM source
+                """
+            )
+            vectors_synced = sync_chunk_vectors(connection)
+            entities_indexed = connection.execute("SELECT COUNT(*) FROM entities_fts").fetchone()[0]
+            claims_indexed = connection.execute("SELECT COUNT(*) FROM claims_fts").fetchone()[0]
+            sources_indexed = connection.execute("SELECT COUNT(*) FROM sources_fts").fetchone()[0]
+        return {
+            "entities_indexed": entities_indexed,
+            "claims_indexed": claims_indexed,
+            "sources_indexed": sources_indexed,
+            "vectors_synced": vectors_synced,
         }
 
     @app.post("/ask")
