@@ -1,0 +1,48 @@
+services:
+  api:
+    build:
+      context: ./apps/api
+    environment:
+      LORE_GOBLIN_DATABASE_PATH: /data/lore_goblin.sqlite3
+      LORE_GOBLIN_CORS_ORIGINS: http://localhost:5173
+      OLLAMA_BASE_URL: http://ollama:11434
+      OLLAMA_CHAT_MODEL: ${OLLAMA_CHAT_MODEL:-llama3.1:8b}
+    ports:
+      - "8000:8000"
+    volumes:
+      - lore-goblin-data:/data
+    depends_on:
+      - ollama
+
+  web:
+    build:
+      context: ./apps/web
+    environment:
+      VITE_API_BASE_URL: http://localhost:8000
+    ports:
+      - "5173:5173"
+    depends_on:
+      - api
+
+  discord-bot:
+    build:
+      context: ./apps/discord-bot
+    environment:
+      DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN:-}
+      DISCORD_GUILD_ID: ${DISCORD_GUILD_ID:-}
+      LORE_GOBLIN_API_URL: http://api:8000
+    depends_on:
+      - api
+    profiles:
+      - bot
+
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama:/root/.ollama
+
+volumes:
+  lore-goblin-data:
+  ollama:
