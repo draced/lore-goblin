@@ -50,3 +50,7 @@ docker compose exec ollama ollama pull llama3.1:8b
 ```
 
 For Discord setup and verification, see [docs/discord-testing.md](docs/discord-testing.md).
+
+## Spec-Driven Development
+
+New features follow the [Lore Goblin constitution](.specify/memory/constitution.md) and spec-kit workflow. Each feature lives under `specs/###-feature-name/` with `spec.md`, `plan.md`, and `tasks.md` artifacts produced by `/speckit-specify`, `/speckit-plan`, and `/speckit-tasks`.

@@ -10,10 +10,12 @@ from .db import initialize_database
 from .repository import (
     add_session_note,
     create_campaign,
+    create_player_character,
     get_campaign,
     get_campaign_for_guild,
     link_discord_guild,
     list_campaigns,
+    list_player_characters,
     list_sessions,
 )
 
@@ -40,6 +42,13 @@ class AddSessionRequest(BaseModel):
     raw_content: str = Field(min_length=1)
     author_display_name: str = Field(min_length=1)
     discord_user_id: str | None = None
+
+
+class AddPlayerCharacterRequest(BaseModel):
+    campaign_id: str | None = None
+    guild_id: str | None = None
+    name: str = Field(min_length=1)
+    notes: str = Field(min_length=1)
 
 
 class AskRequest(BaseModel):
@@ -84,6 +93,21 @@ def create_app(settings: Settings) -> FastAPI:
     @app.get("/campaigns/{campaign_id}/sessions")
     def sessions(campaign_id: str) -> list[dict]:
         return list_sessions(campaign_id)
+
+    @app.get("/campaigns/{campaign_id}/player-characters")
+    def player_characters(campaign_id: str) -> list[dict]:
+        if not get_campaign(campaign_id):
+            raise HTTPException(status_code=404, detail="Campaign not found")
+        return list_player_characters(campaign_id)
+
+    @app.post("/player-characters", status_code=201)
+    def player_character_create(request: AddPlayerCharacterRequest) -> dict:
+        campaign_id = resolve_campaign_id(request.campaign_id, request.guild_id)
+        try:
+            return create_player_character(campaign_id, request.name, request.notes)
+        except ValueError as exc:
+            status_code = 404 if str(exc) == "Campaign not found" else 400
+            raise HTTPException(status_code=status_code, detail=str(exc)) from exc
 
     @app.post("/sessions", status_code=201)
     def session_create(request: AddSessionRequest) -> dict:

@@ -1,0 +1,36 @@
+---
+alwaysApply: true
+---
+
+<!-- SPECKIT START -->
+## Lore Goblin — Spec Kit Context
+
+**Constitution**: `.specify/memory/constitution.md` (v1.0.0)
+
+### Non-Negotiable Principles
+
+- **Local-first**: Docker Compose, SQLite, Ollama-compatible models; cloud not required for core use
+- **Source-grounded**: Answer only from saved campaign sources; cite or admit unknown
+- **Provenance**: Preserve who submitted each note; never silently merge conflicting accounts
+- **Discord-first**: Player UX via slash commands; web UI for setup, guild linking, tone config
+- **Campaign tone**: Configurable per campaign; personality MUST NOT override correctness or citations
+- **Simplicity**: Three-app layout (`apps/api`, `apps/web`, `apps/discord-bot`); YAGNI
+- **Test-first**: Tests written and failing before implementation (TDD, non-negotiable)
+
+### Repository Layout
+
+```text
+apps/api/          FastAPI backend, SQLite, retrieval, Ollama adapter
+apps/web/          React + TypeScript setup and chat UI
+apps/discord-bot/  Discord slash command client
+specs/             Feature specs (###-feature-name/)
+```
+
+### Workflow
+
+New features follow spec-kit: `/speckit-specify` → `/speckit-plan` → `/speckit-tasks` → `/speckit-implement`.
+
+Plans MUST include Constitution Check gates (see `.specify/templates/plan-template.md`).
+
+For the active feature's technical details, read the current plan at `specs/002-player-characters/plan.md`.
+<!-- SPECKIT END -->

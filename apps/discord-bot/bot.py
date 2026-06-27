@@ -163,6 +163,32 @@ async def lore_ask(interaction: discord.Interaction, question: str) -> None:
     await interaction.followup.send(f"{result['answer']}{citation_text}")
 
 
+@lore.command(name="pc", description="Add a player character to this campaign.")
+@app_commands.describe(
+    name="Player character name.",
+    notes="Important notes about who this PC is, what they want, and what the model should remember.",
+)
+async def lore_pc(interaction: discord.Interaction, name: str, notes: str) -> None:
+    await interaction.response.defer(ephemeral=True, thinking=True)
+    if not interaction.guild_id:
+        await interaction.followup.send("Lore Goblin needs a server-linked campaign before adding a player character.")
+        return
+    try:
+        character = post_json(
+            "/player-characters",
+            {
+                "guild_id": str(interaction.guild_id),
+                "name": name,
+                "notes": notes,
+            },
+        )
+    except Exception as exc:
+        await interaction.followup.send(f"Lore Goblin misplaced the character sheet: `{exc}`")
+        return
+
+    await interaction.followup.send(f"Added player character `{character['name']}` to this campaign.")
+
+
 @lore.command(name="campaigns", description="List the available campaigns.")
 async def lore_campaigns(interaction: discord.Interaction) -> None:
     await interaction.response.defer(ephemeral=True, thinking=True)

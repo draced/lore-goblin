@@ -150,6 +150,7 @@ label {
   margin-bottom: 0;
 }
 
+.pc-list,
 .session-list {
   display: flex;
   flex-direction: column;
@@ -159,6 +160,7 @@ label {
   padding: 0;
 }
 
+.pc-list li,
 .session-list li {
   border-bottom: 1px solid #e7decd;
   display: flex;
@@ -167,6 +169,7 @@ label {
   padding-bottom: 0.65rem;
 }
 
+.pc-list span,
 .session-list span {
   color: #756a5b;
   font-size: 0.85rem;

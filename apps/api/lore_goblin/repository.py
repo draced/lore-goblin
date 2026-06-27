@@ -68,6 +68,47 @@ def get_campaign(campaign_id: str) -> dict | None:
     return row_to_dict(row) if row else None
 
 
+def create_player_character(campaign_id: str, name: str, notes: str) -> dict:
+    normalized_name = name.strip()
+    normalized_notes = notes.strip()
+    if not normalized_name:
+        raise ValueError("Player character name is required")
+    if not normalized_notes:
+        raise ValueError("Player character notes are required")
+
+    character_id = new_id("pc")
+    with get_connection() as connection:
+        campaign = connection.execute("SELECT id FROM campaigns WHERE id = ?", (campaign_id,)).fetchone()
+        if not campaign:
+            raise ValueError("Campaign not found")
+        connection.execute(
+            """
+            INSERT INTO player_characters (id, campaign_id, name, notes)
+            VALUES (?, ?, ?, ?)
+            """,
+            (character_id, campaign_id, normalized_name, normalized_notes),
+        )
+        row = connection.execute(
+            "SELECT * FROM player_characters WHERE id = ?",
+            (character_id,),
+        ).fetchone()
+    return row_to_dict(row)
+
+
+def list_player_characters(campaign_id: str) -> list[dict]:
+    with get_connection() as connection:
+        rows = connection.execute(
+            """
+            SELECT *
+            FROM player_characters
+            WHERE campaign_id = ?
+            ORDER BY name COLLATE NOCASE, created_at
+            """,
+            (campaign_id,),
+        ).fetchall()
+    return [row_to_dict(row) for row in rows]
+
+
 def link_discord_guild(campaign_id: str, guild_id: str) -> dict:
     link_id = new_id("dgl")
     with get_connection() as connection:

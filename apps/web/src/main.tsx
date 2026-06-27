@@ -1,6 +1,6 @@
 import React, { FormEvent, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { BookOpen, Link, MessageSquareText, ScrollText, Send } from "lucide-react";
+import { BookOpen, Link, MessageSquareText, ScrollText, Send, Users } from "lucide-react";
 import "./styles.css";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
@@ -16,6 +16,13 @@ type Session = {
   session_date: string;
   label: string | null;
   note_count: number;
+};
+
+type PlayerCharacter = {
+  id: string;
+  campaign_id: string;
+  name: string;
+  notes: string;
 };
 
 type Citation = {
@@ -41,6 +48,7 @@ function App() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [selectedCampaignId, setSelectedCampaignId] = useState("");
   const [sessions, setSessions] = useState<Session[]>([]);
+  const [playerCharacters, setPlayerCharacters] = useState<PlayerCharacter[]>([]);
   const [answer, setAnswer] = useState("");
   const [citations, setCitations] = useState<Citation[]>([]);
   const [status, setStatus] = useState("");
@@ -63,12 +71,21 @@ function App() {
     setSessions(await api<Session[]>(`/campaigns/${campaignId}/sessions`));
   }
 
+  async function refreshPlayerCharacters(campaignId: string) {
+    if (!campaignId) {
+      setPlayerCharacters([]);
+      return;
+    }
+    setPlayerCharacters(await api<PlayerCharacter[]>(`/campaigns/${campaignId}/player-characters`));
+  }
+
   useEffect(() => {
     refreshCampaigns().catch((error) => setStatus(error.message));
   }, []);
 
   useEffect(() => {
     refreshSessions(selectedCampaignId).catch((error) => setStatus(error.message));
+    refreshPlayerCharacters(selectedCampaignId).catch((error) => setStatus(error.message));
   }, [selectedCampaignId]);
 
   async function createCampaign(event: FormEvent<HTMLFormElement>) {
@@ -85,6 +102,22 @@ function App() {
     setCampaigns([campaign, ...campaigns]);
     setSelectedCampaignId(campaign.id);
     setStatus("Campaign created.");
+    event.currentTarget.reset();
+  }
+
+  async function addPlayerCharacter(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const character = await api<PlayerCharacter>("/player-characters", {
+      method: "POST",
+      body: JSON.stringify({
+        campaign_id: selectedCampaignId,
+        name: form.get("name"),
+        notes: form.get("notes")
+      })
+    });
+    setPlayerCharacters([...playerCharacters, character].sort((left, right) => left.name.localeCompare(right.name)));
+    setStatus(`Added ${character.name} to the player character roster.`);
     event.currentTarget.reset();
   }
 
@@ -183,6 +216,26 @@ function App() {
           <button type="submit" disabled={!selectedCampaignId}>Link guild</button>
         </form>
 
+        <form className="panel" onSubmit={addPlayerCharacter}>
+          <h2><Users size={18} /> Player Characters</h2>
+          <p className="muted">{selectedCampaign ? selectedCampaign.name : "Create or select a campaign first."}</p>
+          <label>
+            Name
+            <input name="name" placeholder="Nyra Thornwake" required disabled={!selectedCampaignId} />
+          </label>
+          <label>
+            Notes
+            <textarea
+              name="notes"
+              rows={5}
+              placeholder="Class, ancestry, goals, bonds, secrets, player-facing context..."
+              required
+              disabled={!selectedCampaignId}
+            />
+          </label>
+          <button type="submit" disabled={!selectedCampaignId}>Add PC</button>
+        </form>
+
         <form className="panel wide" onSubmit={submitSession}>
           <h2><ScrollText size={18} /> Session Notes</h2>
           <div className="split">
@@ -222,6 +275,22 @@ function App() {
             </article>
           )}
         </form>
+
+        <section className="panel">
+          <h2>PC Roster</h2>
+          {playerCharacters.length === 0 ? (
+            <p className="muted">No player characters added yet.</p>
+          ) : (
+            <ul className="pc-list">
+              {playerCharacters.map((character) => (
+                <li key={character.id}>
+                  <strong>{character.name}</strong>
+                  <span>{character.notes}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
 
         <section className="panel">
           <h2>Sessions</h2>
