@@ -5,17 +5,18 @@ alwaysApply: true
 <!-- SPECKIT START -->
 ## Lore Goblin — Spec Kit Context
 
-**Constitution**: `.specify/memory/constitution.md` (v1.0.0)
+**Constitution**: `.specify/memory/constitution.md` (v1.1.0)
 
 ### Non-Negotiable Principles
 
 - **Local-first**: Docker Compose, SQLite, Ollama-compatible models; cloud not required for core use
-- **Source-grounded**: Answer only from saved campaign sources; cite or admit unknown
+- **Source-grounded**: Answer only from saved campaign sources; cite source title/type and claim quote; admit unknown
 - **Provenance**: Preserve who submitted each note; never silently merge conflicting accounts
-- **Discord-first**: Player UX via slash commands; web UI for setup, guild linking, tone config
+- **Discord-first**: Player UX via slash commands; web UI for setup, guild linking, tone config, review
 - **Campaign tone**: Configurable per campaign; personality MUST NOT override correctness or citations
-- **Simplicity**: Three-app layout (`apps/api`, `apps/web`, `apps/discord-bot`); YAGNI
+- **Simplicity**: Three-app layout (`apps/api`, `apps/web`, `apps/discord-bot`); YAGNI; hybrid retrieval when documented
 - **Test-first**: Tests written and failing before implementation (TDD, non-negotiable)
+- **Campaign-aware knowledge**: Facts trace to sources; entities and claims; prefer claims over raw chunks
 
 ### Repository Layout
 
@@ -32,5 +33,5 @@ New features follow spec-kit: `/speckit-specify` → `/speckit-plan` → `/speck
 
 Plans MUST include Constitution Check gates (see `.specify/templates/plan-template.md`).
 
-For the active feature's technical details, read the current plan at `specs/002-player-characters/plan.md`.
+For the active feature's technical details, read the current plan at `specs/002-campaign-knowledge-model/plan.md`.
 <!-- SPECKIT END -->

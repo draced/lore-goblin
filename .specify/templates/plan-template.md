@@ -47,8 +47,9 @@
 - [ ] **Provenance (III)**: Player/session attribution not silently merged
 - [ ] **Discord-First (IV)**: Player-facing flows use slash commands where applicable
 - [ ] **Campaign Tone (V)**: Answers respect configured campaign tone; personality never overrides citations or source-grounding
-- [ ] **Simplicity (VI)**: ≤3 apps; no unjustified abstractions
+- [ ] **Simplicity (VI)**: ≤3 apps; no unjustified abstractions; hybrid retrieval only with Complexity Tracking
 - [ ] **Test-First (VII)**: Test plan defined before implementation tasks
+- [ ] **Campaign-Aware Knowledge (VIII)**: Facts trace to sources; entities and claims modeled; no silent merge of conflicts
 - [ ] **Spec Format**: spec.md uses full template (user stories, edge cases, success criteria)
 
 ### Post-Design Re-Check
