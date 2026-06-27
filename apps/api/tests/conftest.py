@@ -39,6 +39,7 @@ def test_settings(database_path: Path) -> Settings:
         ollama_base_url="http://localhost:11434",
         ollama_chat_model="test-model",
         allow_migrate=True,
+        extraction_auto_run=False,
         cors_origins=["http://localhost:5173"],
     )
 
@@ -48,6 +49,7 @@ def client(test_settings: Settings, monkeypatch: pytest.MonkeyPatch) -> TestClie
     get_settings.cache_clear()
     monkeypatch.setenv("LORE_GOBLIN_DATABASE_PATH", test_settings.database_path)
     monkeypatch.setenv("LORE_GOBLIN_ALLOW_MIGRATE", "1")
+    monkeypatch.setenv("LORE_GOBLIN_DISABLE_EXTRACTION_AUTO_RUN", "1")
     app = create_app(test_settings)
     with TestClient(app) as test_client:
         yield test_client

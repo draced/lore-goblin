@@ -1,0 +1,27 @@
+[
+  {
+    "canonical_name": "Father Aldren",
+    "entity_type": "NPC",
+    "aliases": ["Aldren", "Priest Aldren", "Father Aldren", "the priest"]
+  },
+  {
+    "canonical_name": "Mayor Seraphine",
+    "entity_type": "NPC",
+    "aliases": ["Seraphine", "Mayor Seraphine", "the mayor"]
+  },
+  {
+    "canonical_name": "Ruined Chapel",
+    "entity_type": "LOCATION",
+    "aliases": ["Ruined Chapel", "the chapel", "chapel ruins"]
+  },
+  {
+    "canonical_name": "Silver Key",
+    "entity_type": "ITEM",
+    "aliases": ["Silver Key", "silver key", "the key"]
+  },
+  {
+    "canonical_name": "Reliquary",
+    "entity_type": "LOCATION",
+    "aliases": ["Reliquary", "the reliquary"]
+  }
+]

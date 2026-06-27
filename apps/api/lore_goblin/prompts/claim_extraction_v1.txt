@@ -1,0 +1,28 @@
+Extract atomic campaign claims from the source.
+
+Rules:
+- One claim per fact.
+- Preserve uncertainty.
+- Do not mark theories as confirmed.
+- Do not invent facts.
+- Include the source quote.
+- Use only known entity ids where possible.
+
+Known entities:
+{resolved_entities}
+
+Return JSON array:
+[
+  {
+    "claim_text": "...",
+    "subject_entity_name": "...",
+    "predicate": "...",
+    "object_entity_name": "...",
+    "canon_status": "CONFIRMED | RUMOR | THEORY | DISPUTED",
+    "importance": "major | minor | incidental",
+    "source_quote": "..."
+  }
+]
+
+Source:
+{source_text}

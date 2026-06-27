@@ -1,0 +1,20 @@
+[
+  {
+    "claim_text": "The party found the silver key in the ruined chapel.",
+    "subject_entity_name": "Silver Key",
+    "predicate": "found_at",
+    "object_entity_name": "Ruined Chapel",
+    "canon_status": "CONFIRMED",
+    "importance": "major",
+    "source_quote": "The party found a silver key in the ruined chapel."
+  },
+  {
+    "claim_text": "Father Aldren warned about the reliquary.",
+    "subject_entity_name": "Father Aldren",
+    "predicate": "warned_about",
+    "object_entity_name": "Reliquary",
+    "canon_status": "CONFIRMED",
+    "importance": "minor",
+    "source_quote": "Father Aldren warned them about the reliquary."
+  }
+]

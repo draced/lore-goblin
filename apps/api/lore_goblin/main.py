@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException
@@ -7,6 +9,7 @@ from pydantic import BaseModel, Field
 from .answering import answer_question
 from .config import Settings, get_settings
 from .db import get_connection, initialize_database, set_database_path
+from .extraction.jobs import get_extraction_status, shutdown_executor
 from .migrations.runner import run_migration
 from .repository import (
     add_session_note,
@@ -75,7 +78,13 @@ class AskRequest(BaseModel):
 def create_app(settings: Settings) -> FastAPI:
     set_database_path(settings.database_path)
     initialize_database(settings.database_path)
-    app = FastAPI(title="Lore Goblin API", version="0.1.0")
+
+    @asynccontextmanager
+    async def lifespan(_app: FastAPI):
+        yield
+        shutdown_executor()
+
+    app = FastAPI(title="Lore Goblin API", version="0.1.0", lifespan=lifespan)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
@@ -118,6 +127,13 @@ def create_app(settings: Settings) -> FastAPI:
             return list_sources(campaign_id, source_type)
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.get("/sources/{source_id}/extraction-status")
+    def extraction_status(source_id: str) -> dict:
+        status = get_extraction_status(source_id)
+        if not status:
+            raise HTTPException(status_code=404, detail="Extraction job not found")
+        return status
 
     @app.get("/campaigns/{campaign_id}/entities")
     def entities(campaign_id: str, entity_type: str | None = None) -> list[dict]:

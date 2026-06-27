@@ -1,9 +1,18 @@
 import json
+import sqlite3
 
 from .chunking import chunk_note
 from .config import get_settings
 from .db import get_connection, new_id, row_to_dict
+from .extraction.entities import find_mention_span, normalize_entity_type
+from .extraction.schemas import ExtractedClaim, ExtractedEntity, ResolutionResult
 from .models import ENTITY_TYPES, SOURCE_TYPES, EntityType, SourceType
+
+
+def _enqueue_extraction(source_id: str, campaign_id: str) -> None:
+    from .extraction.jobs import enqueue_extraction_job
+
+    enqueue_extraction_job(source_id, campaign_id)
 
 
 def ensure_user(display_name: str, discord_user_id: str | None = None) -> dict:
@@ -131,7 +140,15 @@ def create_source(
             ),
         )
         row = connection.execute("SELECT * FROM source WHERE id = ?", (source_id,)).fetchone()
-    return row_to_dict(row)
+    source = row_to_dict(row)
+    _enqueue_extraction(source_id, campaign_id)
+    return source
+
+
+def get_source(source_id: str) -> dict | None:
+    with get_connection() as connection:
+        row = connection.execute("SELECT * FROM source WHERE id = ?", (source_id,)).fetchone()
+    return row_to_dict(row) if row else None
 
 
 def list_sources(campaign_id: str, source_type: str | None = None) -> list[dict]:
@@ -271,6 +288,7 @@ def create_player_character(campaign_id: str, name: str, notes: str) -> dict:
             "SELECT * FROM player_characters WHERE id = ?",
             (character_id,),
         ).fetchone()
+    _enqueue_extraction(source_id, campaign_id)
     return row_to_dict(row)
 
 
@@ -428,6 +446,7 @@ def add_session_note(
                 (new_id("chk"), campaign_id, session_id, source_id, index, chunk),
             )
 
+    _enqueue_extraction(source_id, campaign_id)
     return {
         "session": session,
         "note": {
@@ -438,6 +457,239 @@ def add_session_note(
         },
         "chunk_count": len(chunks),
     }
+
+
+def _ensure_chunk_session(connection: sqlite3.Connection, source: dict) -> str:
+    if source.get("session_id"):
+        return source["session_id"]
+    existing = connection.execute(
+        """
+        SELECT id
+        FROM sessions
+        WHERE campaign_id = ? AND session_date = '0000-01-01' AND label = 'Unassigned'
+        """,
+        (source["campaign_id"],),
+    ).fetchone()
+    if existing:
+        return existing["id"]
+    session_id = new_id("ses")
+    connection.execute(
+        """
+        INSERT INTO sessions (id, campaign_id, session_date, label)
+        VALUES (?, ?, '0000-01-01', 'Unassigned')
+        """,
+        (session_id, source["campaign_id"]),
+    )
+    return session_id
+
+
+def ensure_source_chunks(connection: sqlite3.Connection, source: dict) -> None:
+    existing = connection.execute(
+        "SELECT COUNT(*) FROM content_chunks WHERE source_id = ?",
+        (source["id"],),
+    ).fetchone()[0]
+    if existing:
+        return
+    session_id = _ensure_chunk_session(connection, source)
+    source_type = "session_note" if source["source_type"] == SourceType.SESSION_NOTE else "wiki_page"
+    chunks = chunk_note(source["body"])
+    for index, chunk in enumerate(chunks):
+        connection.execute(
+            """
+            INSERT INTO content_chunks (
+                id, campaign_id, session_id, source_type, source_id, chunk_index, chunk_text
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                new_id("chk"),
+                source["campaign_id"],
+                session_id,
+                source_type,
+                source["id"],
+                index,
+                chunk,
+            ),
+        )
+
+
+def clear_extraction_artifacts(connection: sqlite3.Connection, source_id: str) -> None:
+    connection.execute("DELETE FROM entity_mention WHERE source_id = ?", (source_id,))
+    connection.execute("DELETE FROM claim WHERE source_id = ?", (source_id,))
+    connection.execute("DELETE FROM relationship WHERE source_id = ?", (source_id,))
+
+
+def merge_entity_aliases(connection: sqlite3.Connection, entity_id: str, aliases: list[str]) -> None:
+    row = connection.execute(
+        "SELECT aliases_json FROM entity WHERE id = ?",
+        (entity_id,),
+    ).fetchone()
+    if not row:
+        return
+    existing_aliases = json.loads(row["aliases_json"] or "[]")
+    canonical = connection.execute(
+        "SELECT name FROM entity WHERE id = ?",
+        (entity_id,),
+    ).fetchone()["name"]
+    merged: list[str] = []
+    seen = {canonical.lower()}
+    for alias in [*existing_aliases, *aliases]:
+        normalized = alias.strip()
+        if not normalized:
+            continue
+        key = normalized.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        merged.append(normalized)
+    connection.execute(
+        """
+        UPDATE entity
+        SET aliases_json = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+        """,
+        (json.dumps(merged), entity_id),
+    )
+
+
+def persist_entity_mentions(
+    connection: sqlite3.Connection,
+    source_id: str,
+    source_text: str,
+    entity_id: str,
+    names: list[str],
+) -> None:
+    for name in names:
+        span = find_mention_span(source_text, name)
+        if span is None:
+            continue
+        start, end = span
+        connection.execute(
+            """
+            INSERT INTO entity_mention (
+                id, source_id, entity_id, mention_text, start_offset, end_offset
+            )
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (new_id("men"), source_id, entity_id, name, start, end),
+        )
+
+
+def resolve_or_create_entities(
+    campaign_id: str,
+    source_id: str,
+    source_text: str,
+    extracted: list[ExtractedEntity],
+    resolutions: list[tuple[ExtractedEntity, ResolutionResult]],
+) -> dict[str, str]:
+    name_to_id: dict[str, str] = {}
+    with get_connection() as connection:
+        for entity, resolution in resolutions:
+            aliases = list({entity.name, *entity.aliases})
+            if resolution.matched_entity_id:
+                entity_id = resolution.matched_entity_id
+                merge_entity_aliases(connection, entity_id, aliases)
+            else:
+                entity_id = new_id("ent")
+                connection.execute(
+                    """
+                    INSERT INTO entity (
+                        id, campaign_id, entity_type, name, aliases_json, summary
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        entity_id,
+                        campaign_id,
+                        normalize_entity_type(entity.type),
+                        entity.name.strip(),
+                        json.dumps([alias for alias in entity.aliases if alias.strip()]),
+                        entity.short_description.strip(),
+                    ),
+                )
+            name_to_id[entity.name.strip().lower()] = entity_id
+            for alias in entity.aliases:
+                if alias.strip():
+                    name_to_id[alias.strip().lower()] = entity_id
+            persist_entity_mentions(
+                connection,
+                source_id,
+                source_text,
+                entity_id,
+                aliases,
+            )
+    return name_to_id
+
+
+def _lookup_entity_id(name_to_id: dict[str, str], name: str | None) -> str | None:
+    if not name:
+        return None
+    return name_to_id.get(name.strip().lower())
+
+
+def persist_claims(
+    campaign_id: str,
+    source_id: str,
+    claims: list[ExtractedClaim],
+    entity_map: dict[str, str],
+) -> None:
+    with get_connection() as connection:
+        for claim in claims:
+            subject_id = _lookup_entity_id(entity_map, claim.subject_entity_name)
+            if not subject_id:
+                continue
+            object_id = _lookup_entity_id(entity_map, claim.object_entity_name)
+            connection.execute(
+                """
+                INSERT INTO claim (
+                    id, campaign_id, claim_text, subject_entity_id, predicate,
+                    object_entity_id, canon_status, source_id
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    new_id("clm"),
+                    campaign_id,
+                    claim.claim_text.strip(),
+                    subject_id,
+                    claim.predicate.strip(),
+                    object_id,
+                    claim.canon_status,
+                    source_id,
+                ),
+            )
+
+
+def persist_relationships(
+    campaign_id: str,
+    source_id: str,
+    relationships: list[dict],
+    entity_map: dict[str, str],
+) -> None:
+    with get_connection() as connection:
+        for relationship in relationships:
+            source_entity_id = _lookup_entity_id(entity_map, relationship["source_entity_name"])
+            target_entity_id = _lookup_entity_id(entity_map, relationship["target_entity_name"])
+            if not source_entity_id or not target_entity_id:
+                continue
+            connection.execute(
+                """
+                INSERT INTO relationship (
+                    id, campaign_id, source_entity_id, target_entity_id,
+                    relationship_type, description, source_id
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    new_id("rel"),
+                    campaign_id,
+                    source_entity_id,
+                    target_entity_id,
+                    relationship["relationship_type"],
+                    relationship.get("description", ""),
+                    source_id,
+                ),
+            )
 
 
 def list_sessions(campaign_id: str) -> list[dict]:

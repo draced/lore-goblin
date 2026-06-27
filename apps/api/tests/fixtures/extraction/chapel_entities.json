@@ -1,0 +1,26 @@
+[
+  {
+    "name": "Father Aldren",
+    "type": "NPC",
+    "aliases": ["Aldren"],
+    "short_description": "Chapel priest who warned the party.",
+    "importance": "major",
+    "evidence_quote": "Father Aldren warned them about the reliquary."
+  },
+  {
+    "name": "Ruined Chapel",
+    "type": "LOCATION",
+    "aliases": ["the chapel"],
+    "short_description": "An abandoned chapel where the party found a key.",
+    "importance": "minor",
+    "evidence_quote": "The party found a silver key in the ruined chapel."
+  },
+  {
+    "name": "Silver Key",
+    "type": "ITEM",
+    "aliases": ["silver key"],
+    "short_description": "A silver key found in the chapel.",
+    "importance": "major",
+    "evidence_quote": "The party found a silver key in the ruined chapel."
+  }
+]

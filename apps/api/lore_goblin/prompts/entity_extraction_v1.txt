@@ -1,0 +1,17 @@
+Extract campaign entities from the source.
+
+Return only JSON.
+
+Entity types:
+PC, NPC, LOCATION, FACTION, ITEM, QUEST, EVENT, DEITY, MONSTER, ORGANIZATION, UNKNOWN.
+
+For each entity include:
+- name
+- type
+- aliases
+- short_description
+- importance: major, minor, incidental
+- evidence_quote
+
+Source:
+{source_text}

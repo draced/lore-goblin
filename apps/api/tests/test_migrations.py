@@ -30,7 +30,7 @@ def test_migration_applies_on_fresh_database(database_path: Path) -> None:
                 "SELECT name FROM sqlite_master WHERE type = 'table'"
             ).fetchall()
         }
-    assert version == 2
+    assert version == 3
     assert "source" in tables
     assert "entity" in tables
     assert "claim" in tables
@@ -43,9 +43,9 @@ def test_migration_is_idempotent(database_path: Path) -> None:
         applied = apply_pending_migrations(connection)
         connection.commit()
         second_version = get_schema_version(connection)
-    assert first_version == 2
+    assert first_version == 3
     assert applied == []
-    assert second_version == 2
+    assert second_version == 3
 
 
 def test_dry_run_reports_pending_counts(legacy_database_path: Path, legacy_campaign: dict) -> None:
